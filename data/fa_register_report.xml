@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="fa_register_report" model="account.report">
+        <field name="name">Fixed Asset Register</field>
+        <field name="sequence">45</field>
+        <field name="filter_date_range" eval="True"/>
+        <field name="filter_period_comparison" eval="True"/>
+        <field name="filter_journals" eval="True"/>
+        <field name="filter_analytic" eval="True"/>
+        <field name="filter_multi_company">selector</field>
+        <field name="filter_unfold_all" eval="True"/>
+        <field name="filter_hierarchy">optional</field>
+        <field name="filter_hide_0_lines">never</field>
+        <field name="default_opening_date_filter">this_month</field>
+        <field name="search_bar" eval="True"/>
+        <field name="custom_handler_model_id" ref="model_tha_vhg_fa_register_report_handler"/>
+        <field name="column_ids">
+            <record id="fa_register_col_purchase_date" model="account.report.column">
+                <field name="name">Purchase Date</field>
+                <field name="expression_label">acquisition_date</field>
+                <field name="figure_type">date</field>
+            </record>
+            <record id="fa_register_col_asset_code" model="account.report.column">
+                <field name="name">Asset Code</field>
+                <field name="expression_label">asset_code</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_department" model="account.report.column">
+                <field name="name">Dept</field>
+                <field name="expression_label">department</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_unit" model="account.report.column">
+                <field name="name">Unit</field>
+                <field name="expression_label">unit</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_location" model="account.report.column">
+                <field name="name">Location</field>
+                <field name="expression_label">location</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_vendor" model="account.report.column">
+                <field name="name">Vendor Name</field>
+                <field name="expression_label">vendor_name</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_contact" model="account.report.column">
+                <field name="name">Contact</field>
+                <field name="expression_label">contact</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_item_name" model="account.report.column">
+                <field name="name">Item Name</field>
+                <field name="expression_label">item_name</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_brand" model="account.report.column">
+                <field name="name">Brand Name</field>
+                <field name="expression_label">brand_name</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_model_no" model="account.report.column">
+                <field name="name">Model No</field>
+                <field name="expression_label">model_no</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_serial_no" model="account.report.column">
+                <field name="name">Serial No</field>
+                <field name="expression_label">serial_no</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_size" model="account.report.column">
+                <field name="name">Size</field>
+                <field name="expression_label">size</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_color" model="account.report.column">
+                <field name="name">Color</field>
+                <field name="expression_label">color</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_quantity" model="account.report.column">
+                <field name="name">Qty (Pcs or Set)</field>
+                <field name="expression_label">quantity</field>
+                <field name="figure_type">integer</field>
+            </record>
+            <record id="fa_register_col_remark" model="account.report.column">
+                <field name="name">Remark</field>
+                <field name="expression_label">remark</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_prorata_date" model="account.report.column">
+                <field name="name">Prorata Date</field>
+                <field name="expression_label">prorata_date</field>
+                <field name="figure_type">date</field>
+            </record>
+            <record id="fa_register_col_gl_code" model="account.report.column">
+                <field name="name">GL Code</field>
+                <field name="expression_label">gl_code</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_asset_category" model="account.report.column">
+                <field name="name">Asset Category</field>
+                <field name="expression_label">asset_category</field>
+                <field name="figure_type">string</field>
+            </record>
+            <record id="fa_register_col_cost_opening" model="account.report.column">
+                <field name="name">Total Amt (b/d)-Ks</field>
+                <field name="expression_label">cost_opening</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_purchase" model="account.report.column">
+                <field name="name">Purchase</field>
+                <field name="expression_label">purchase</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_movement_date" model="account.report.column">
+                <field name="name">Date</field>
+                <field name="expression_label">movement_date</field>
+                <field name="figure_type">date</field>
+            </record>
+            <record id="fa_register_col_transfer" model="account.report.column">
+                <field name="name">Transfer</field>
+                <field name="expression_label">transfer</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_write_off" model="account.report.column">
+                <field name="name">Write Off</field>
+                <field name="expression_label">write_off</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_disposal" model="account.report.column">
+                <field name="name">Disposal</field>
+                <field name="expression_label">disposal</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_cost_closing" model="account.report.column">
+                <field name="name">Total Amt (c/d)-Ks</field>
+                <field name="expression_label">cost_closing</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_life_years" model="account.report.column">
+                <field name="name">Total in Year</field>
+                <field name="expression_label">life_total_years</field>
+                <field name="figure_type">float</field>
+            </record>
+            <record id="fa_register_col_life_months" model="account.report.column">
+                <field name="name">Total in month</field>
+                <field name="expression_label">life_total_months</field>
+                <field name="figure_type">integer</field>
+            </record>
+            <record id="fa_register_col_remaining_years" model="account.report.column">
+                <field name="name">Remain in Year</field>
+                <field name="expression_label">life_remaining_years</field>
+                <field name="figure_type">float</field>
+            </record>
+            <record id="fa_register_col_remaining_months" model="account.report.column">
+                <field name="name">Remain in month</field>
+                <field name="expression_label">life_remaining_months</field>
+                <field name="figure_type">integer</field>
+            </record>
+            <record id="fa_register_col_depreciation_per_month" model="account.report.column">
+                <field name="name">Depn; Per Month</field>
+                <field name="expression_label">depreciation_per_month</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_depreciation_opening" model="account.report.column">
+                <field name="name">Opening Accumulated Dep;</field>
+                <field name="expression_label">depreciation_opening</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_apr" model="account.report.column">
+                <field name="name">Apr</field>
+                <field name="expression_label">depreciation_apr</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_may" model="account.report.column">
+                <field name="name">May</field>
+                <field name="expression_label">depreciation_may</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_jun" model="account.report.column">
+                <field name="name">Jun</field>
+                <field name="expression_label">depreciation_jun</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_jul" model="account.report.column">
+                <field name="name">Jul</field>
+                <field name="expression_label">depreciation_jul</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_aug" model="account.report.column">
+                <field name="name">Aug</field>
+                <field name="expression_label">depreciation_aug</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_sep" model="account.report.column">
+                <field name="name">Sep</field>
+                <field name="expression_label">depreciation_sep</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_oct" model="account.report.column">
+                <field name="name">Oct</field>
+                <field name="expression_label">depreciation_oct</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_nov" model="account.report.column">
+                <field name="name">Nov</field>
+                <field name="expression_label">depreciation_nov</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_dec" model="account.report.column">
+                <field name="name">Dec</field>
+                <field name="expression_label">depreciation_dec</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_jan" model="account.report.column">
+                <field name="name">Jan</field>
+                <field name="expression_label">depreciation_jan</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_feb" model="account.report.column">
+                <field name="name">Feb</field>
+                <field name="expression_label">depreciation_feb</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_mar" model="account.report.column">
+                <field name="name">Mar</field>
+                <field name="expression_label">depreciation_mar</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_depreciation_total" model="account.report.column">
+                <field name="name">During Total Depreciation</field>
+                <field name="expression_label">depreciation_total</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_depreciation_adjustments" model="account.report.column">
+                <field name="name">Disposal/Write Off/Sold/Transfer/Adjust</field>
+                <field name="expression_label">depreciation_adjustments</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_depreciation_closing" model="account.report.column">
+                <field name="name">Closing Accumulated Dep;</field>
+                <field name="expression_label">depreciation_closing</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_nbv" model="account.report.column">
+                <field name="name">NBV</field>
+                <field name="expression_label">net_book_value</field>
+                <field name="figure_type">monetary</field>
+                <field name="blank_if_zero" eval="True"/>
+            </record>
+            <record id="fa_register_col_remark_end" model="account.report.column">
+                <field name="name">Remark</field>
+                <field name="expression_label">remark_end</field>
+                <field name="figure_type">string</field>
+            </record>
+        </field>
+    </record>
+
+    <record id="action_account_report_fa_register" model="ir.actions.client">
+        <field name="name">Fixed Asset Register</field>
+        <field name="tag">account_report</field>
+        <field name="path">fixed-asset-register</field>
+        <field name="params" eval="{'ignore_session': True}"/>
+        <field name="context" eval="{'report_id': ref('tha_vhg_fa_register.fa_register_report')}"/>
+    </record>
+
+    <menuitem
+        id="menu_action_account_report_fa_register"
+        name="Fixed Asset Register"
+        action="action_account_report_fa_register"
+        parent="tha_vhg_bs_ext.menu_vhg_management_reports"
+        groups="account.group_account_readonly"
+        sequence="26"/>
+</odoo>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t
+        t-name="tha_vhg_fa_register.FixedAssetRegisterHeader"
+        t-inherit="account_reports.AccountReportHeaderCustomizable"
+        t-inherit-mode="primary">
+        <xpath expr="//tr[@data-id='column_headers_row']/th[1]" position="attributes">
+            <attribute name="rowspan">3</attribute>
+        </xpath>
+        <xpath expr="//tr[@data-id='column_headers_row']/th[1]" position="inside">
+            <span>Sr No</span>
+        </xpath>
+        <xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[1]" position="replace"/>
+        <xpath expr="//tr[@data-id='column_subheaders_row']/th[1]" position="replace"/>
+    </t>
+</templates>
