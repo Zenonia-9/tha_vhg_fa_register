@@ -16,6 +16,8 @@
     "assets": {
         "web.assets_backend": [
             "tha_vhg_fa_register/static/src/xml/fa_register_header.xml",
+            "tha_vhg_fa_register/static/src/js/fa_register_header.js",
+            "tha_vhg_fa_register/static/src/scss/fa_register_header.scss",
         ],
     },
     "installable": True,

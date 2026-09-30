@@ -1,0 +1,15 @@
+.o_account_reports_page {
+    .fa_register_month_header {
+        cursor: pointer;
+        user-select: none;
+
+        &::after {
+            content: " ▾";
+            font-size: 0.8em;
+        }
+
+        &.is-folded::after {
+            content: " ▸";
+        }
+    }
+}

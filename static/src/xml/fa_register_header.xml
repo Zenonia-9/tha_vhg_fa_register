@@ -4,13 +4,37 @@
         t-name="tha_vhg_fa_register.FixedAssetRegisterHeader"
         t-inherit="account_reports.AccountReportHeaderCustomizable"
         t-inherit-mode="primary">
-        <xpath expr="//tr[@data-id='column_headers_row']/th[1]" position="attributes">
-            <attribute name="rowspan">3</attribute>
+        <xpath expr="//tr[@data-id='column_headers_row']/th[1]" position="replace">
+            <th rowspan="3">
+                <span>Sr No</span>
+            </th>
         </xpath>
-        <xpath expr="//tr[@data-id='column_headers_row']/th[1]" position="inside">
-            <span>Sr No</span>
+        <xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[@data-expression_label='depreciation_apr']" position="attributes">
+            <attribute name="class" add="fa_register_month_header" separator=" "/>
+            <attribute name="t-on-click">this.toggleMonthlyColumns()</attribute>
+            <attribute name="title">Click to fold or show monthly depreciation columns</attribute>
+            <attribute name="colspan">12</attribute>
+            <attribute name="t-attf-class">#{this.areMonthlyColumnsFolded ? 'fa_register_month_header is-folded' : 'fa_register_month_header'}</attribute>
         </xpath>
-        <xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[1]" position="replace"/>
-        <xpath expr="//tr[@data-id='column_subheaders_row']/th[1]" position="replace"/>
+<xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[@data-expression_label='depreciation_jun']" position="attributes">
+            <attribute name="t-if">!this.areMonthlyColumnsFolded</attribute>
+        </xpath>
+<xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[@data-expression_label='depreciation_aug']" position="attributes">
+            <attribute name="t-if">!this.areMonthlyColumnsFolded</attribute>
+        </xpath>
+<xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[@data-expression_label='depreciation_oct']" position="attributes">
+            <attribute name="t-if">!this.areMonthlyColumnsFolded</attribute>
+        </xpath>
+<xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[@data-expression_label='depreciation_dec']" position="attributes">
+            <attribute name="t-if">!this.areMonthlyColumnsFolded</attribute>
+        </xpath>
+<xpath expr="//tr[@data-id='column_custom_subheaders_row']/th[@data-expression_label='depreciation_feb']" position="attributes">
+            <attribute name="t-if">!this.areMonthlyColumnsFolded</attribute>
+        </xpath>
+</t>
+    <t t-name="tha_vhg_fa_register.FixedAssetRegisterLine" t-inherit="account_reports.AccountReportLineCustomizable" t-inherit-mode="primary">
+        <xpath expr="//t[@data-id='line_column']" position="attributes">
+            <attribute name="t-if">!controller.options.fa_register_months_folded or not cell.expression_label or not cell.expression_label.startsWith('depreciation_')</attribute>
+        </xpath>
     </t>
 </templates>

@@ -109,21 +109,37 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 primary_headers.append(filtered_level)
         options["column_headers"] = primary_headers
 
-        options["custom_columns_subheaders"] = [
-            {"name": "", "colspan": 2},
-            {"name": _("User"), "colspan": 3},
-            {"name": "", "colspan": 13},
-            {"name": _("Assets"), "colspan": 7},
-            {"name": _("Useful Life"), "colspan": 4},
-            {"name": _("Depreciation"), "colspan": 17},
-            {"name": _("Book Value"), "colspan": 1},
-            {"name": _("Remark"), "colspan": 1},
+        monthly_start = 2 + 3 + 12 + 8 + 4 + 2
+        monthly_count = len(MONTH_EXPRESSION_LABELS)
+        column_sections = [
+            (2, ""),
+            (3, _("User")),
+            (12, _("Characteristics")),
+            (8, _("Assets")),
+            (4, _("Useful Life")),
+            (2, _("Depreciation")),
+            (monthly_count, ""),
+            (3, _("Depreciation")),
+            (1, _("Book Value")),
+            (1, _("Remark")),
         ]
-        if comparisons:
-            options["custom_columns_subheaders"].append({
+        section_headers = []
+        column_offset = 0
+        for colspan, name in column_sections:
+            if column_offset >= len(options["columns"]):
+                break
+            colspan = min(colspan, len(options["columns"]) - column_offset)
+            header = {"name": name, "colspan": colspan}
+            if name == "" and colspan == monthly_count and column_offset == monthly_start:
+                header["expression_label"] = MONTH_EXPRESSION_LABELS[0]
+            section_headers.append(header)
+            column_offset += colspan
+        if column_offset < len(options["columns"]):
+            section_headers.append({
                 "name": _("Comparison"),
-                "colspan": len(comparisons) * len(COMPARE_LABELS),
+                "colspan": len(options["columns"]) - column_offset,
             })
+        options["custom_columns_subheaders"] = section_headers
         options["custom_display_config"]["templates"].pop(
             "AccountReportFilters",
             None,
@@ -168,13 +184,13 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         asset_ids = [asset_id for _account_id, asset_id, _group_id, _values in year_lines]
         assets = self.env["account.asset"].browse(asset_ids)
         assets_by_id = {asset.id: asset for asset in assets}
-        month_values_by_asset = [
-            {
+        month_values_by_asset = {
+            month_index: {
                 asset_id: values
                 for _account_id, asset_id, _group_id, values in lines
             }
-            for lines in month_lines.values()
-        ]
+            for month_index, lines in month_lines.items()
+        }
         comparison_values_by_asset = [
             {
                 asset_id: values
@@ -329,9 +345,9 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             "remark_end": None,
         }
 
-        for month_index, month_values_by_asset in enumerate(month_values):
+        for month_index, asset_values_by_id in month_values.items():
             expression_label = MONTH_EXPRESSION_LABELS[month_index]
-            month_asset_values = month_values_by_asset.get(asset.id)
+            month_asset_values = asset_values_by_id.get(asset.id)
             row_values[expression_label] = (
                 month_asset_values.get("depre_plus")
                 if month_asset_values else None
