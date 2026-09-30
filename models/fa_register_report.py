@@ -118,7 +118,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             (8, _("Assets")),
             (4, _("Useful Life")),
             (2, _("Depreciation")),
-            (monthly_count, ""),
+            (monthly_count, _("Monthly Depreciation")),
             (3, _("Depreciation")),
             (1, _("Book Value")),
             (1, _("Remark")),
@@ -130,7 +130,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 break
             colspan = min(colspan, len(options["columns"]) - column_offset)
             header = {"name": name, "colspan": colspan}
-            if name == "" and colspan == monthly_count and column_offset == monthly_start:
+            if column_offset == monthly_start:
                 header["expression_label"] = MONTH_EXPRESSION_LABELS[0]
             section_headers.append(header)
             column_offset += colspan
@@ -146,6 +146,9 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         )
         options["custom_display_config"]["templates"]["AccountReportHeader"] = (
             "tha_vhg_fa_register.FixedAssetRegisterHeader"
+        )
+        options["custom_display_config"]["templates"]["AccountReportLine"] = (
+            "tha_vhg_fa_register.FixedAssetRegisterLine"
         )
 
     def _dynamic_lines_generator(

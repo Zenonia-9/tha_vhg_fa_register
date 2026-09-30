@@ -1,7 +1,7 @@
 {
     "name": "VHG Fixed Asset Register",
     "summary": "Native accounting report matching the Victoria Hospital fixed asset register.",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.2",
     "category": "Accounting/Accounting",
     "author": "Thein Htoo Aung",
     "license": "LGPL-3",
