@@ -7,6 +7,21 @@ from odoo import _, fields, models
 from odoo.tools import format_date
 
 
+class IrUiMenu(models.Model):
+    _inherit = "ir.ui.menu"
+
+    def tha_vhg_attach_fa_register_management_menu(self):
+        """Attach the register to an existing shared Management Reports root."""
+        own_root = self.env.ref("tha_vhg_bs_ext.menu_vhg_management_reports")
+        shared_root = self.search([
+            ("id", "!=", own_root.id),
+            ("name", "=", "Management Reports"),
+            ("parent_id", "=", self.env.ref("account.menu_finance_configuration").id),
+        ], order="id", limit=1)
+        target_root = shared_root or own_root
+        self.env.ref("tha_vhg_fa_register.menu_action_account_report_fa_register").parent_id = target_root
+
+
 MONTH_EXPRESSION_LABELS = (
     "depreciation_apr", "depreciation_may", "depreciation_jun",
     "depreciation_jul", "depreciation_aug", "depreciation_sep",

@@ -297,4 +297,6 @@
         parent="tha_vhg_bs_ext.menu_vhg_management_reports"
         groups="account.group_account_readonly"
         sequence="26"/>
+
+    <function model="ir.ui.menu" name="tha_vhg_attach_fa_register_management_menu" eval="[[]]"/>
 </odoo>
