@@ -164,16 +164,17 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             return []
 
         month_lines = {}
-        for month_index in range(12):
-            month_start = date_from + relativedelta(months=month_index)
-            if month_start > date_to:
-                continue
-            month_end = month_start.replace(
-                day=monthrange(month_start.year, month_start.month)[1]
-            )
-            month_lines[month_index] = self._query_register_lines(
-                options, month_start, min(month_end, date_to)
-            )
+        if not options.get("fa_register_months_folded"):
+            for month_index in range(12):
+                month_start = date_from + relativedelta(months=month_index)
+                if month_start > date_to:
+                    continue
+                month_end = month_start.replace(
+                    day=monthrange(month_start.year, month_start.month)[1]
+                )
+                month_lines[month_index] = self._query_register_lines(
+                    options, month_start, min(month_end, date_to)
+                )
 
         comparison_data = []
         for comparison_date in options.get("fa_register_comparison_dates", []):
@@ -186,6 +187,11 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             comparison_data.append(self._query_register_lines(
                 options, comparison_start, comparison_as_of
             ))
+
+        if not options.get("fa_register_expand_group_id") and not options.get("unfold_all") and not options.get("unfolded_lines"):
+            return self._get_collapsed_group_lines(
+                report, options, year_lines, month_lines, comparison_data,
+            )
 
         asset_ids = [asset_id for _account_id, asset_id, _group_id, _values in year_lines]
         assets = self.env["account.asset"].browse(asset_ids)
@@ -206,11 +212,6 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             }
             for lines in comparison_data
         ]
-
-        if not options.get("fa_register_expand_group_id") and not options.get("unfold_all") and not options.get("unfolded_lines"):
-            return self._get_collapsed_group_lines(
-                report, options, year_lines, month_lines, comparison_data,
-            )
 
         detail_lines = []
         for account_id, asset_id, asset_group_id, values in year_lines:
@@ -426,7 +427,14 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 "date_to": fields.Date.to_string(date_to),
             },
         }
-        return super()._query_lines(period_options)
+        lines = super()._query_lines(period_options)
+        requested_group_id = options.get("fa_register_expand_group_id")
+        if requested_group_id:
+            lines = [
+                line for line in lines
+                if line[2] == requested_group_id
+            ]
+        return lines
 
     def _get_asset_column_values(
         self, asset, values, month_values, comparison_values, as_of_date,
