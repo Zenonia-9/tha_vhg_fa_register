@@ -4,7 +4,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 
 from odoo import _, fields, models
-from odoo.tools import format_date
+from odoo.tools import SQL, format_date
 
 
 class IrUiMenu(models.Model):
@@ -187,6 +187,8 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         asset_ids = [asset_id for _account_id, asset_id, _group_id, _values in year_lines]
         assets = self.env["account.asset"].browse(asset_ids)
         assets_by_id = {asset.id: asset for asset in assets}
+        related_assets = assets | assets.mapped("children_ids")
+        future_move_stats = self._get_future_move_stats(related_assets, date_to)
         month_values_by_asset = {
             month_index: {
                 asset_id: values
@@ -211,6 +213,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 month_values_by_asset,
                 comparison_values_by_asset,
                 date_to,
+                future_move_stats,
             )
             columns = []
             for column in options["columns"]:
@@ -268,6 +271,37 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
 
         return [(0, line) for line in lines]
 
+    def _get_future_move_stats(self, assets, as_of_date):
+        """Read future depreciation counts and first values in one database query."""
+        if not assets:
+            return {}
+
+        self.env.cr.execute(SQL(
+            """
+            SELECT move.asset_id,
+                   COUNT(*) AS move_count,
+                   (ARRAY_AGG(move.depreciation_value ORDER BY move.date, move.id))[1]
+                       AS first_depreciation_value,
+                   COALESCE(NULLIF(asset.method_period, ''), '1')::integer AS period_months
+              FROM account_move move
+              JOIN account_asset asset ON asset.id = move.asset_id
+             WHERE move.asset_id IN %(asset_ids)s
+               AND move.date > %(as_of_date)s
+               AND move.state != 'cancel'
+               AND move.asset_number_days IS NOT NULL
+          GROUP BY move.asset_id, asset.method_period
+            """,
+            asset_ids=tuple(assets.ids) or (0,),
+            as_of_date=as_of_date,
+        ))
+        return {
+            asset_id: {
+                "remaining_months": move_count * period_months,
+                "monthly_depreciation": first_value / period_months,
+            }
+            for asset_id, move_count, first_value, period_months in self.env.cr.fetchall()
+        }
+
     def _query_register_lines(self, options, date_from, date_to):
         period_options = {
             **options,
@@ -280,7 +314,8 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         return super()._query_lines(period_options)
 
     def _get_asset_column_values(
-        self, asset, values, month_values, comparison_values, as_of_date
+        self, asset, values, month_values, comparison_values, as_of_date,
+        future_move_stats,
     ):
         def optional_field_value(field_name):
             if field_name not in asset._fields:
@@ -290,23 +325,14 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
 
         method_period = int(asset.method_period or "1")
         total_life_months = asset.method_number * method_period
-        monthly_depreciation = 0.0
         related_assets = asset | asset.children_ids
         remaining_months = 0
+        monthly_depreciation = 0.0
         for related_asset in related_assets:
-            related_period_months = int(related_asset.method_period or "1")
-            future_moves = related_asset.depreciation_move_ids.filtered(
-                lambda move: move.date
-                and move.date > as_of_date
-                and move.state != "cancel"
-                and move.asset_number_days is not False
-            ).sorted("date")
-            remaining_months += len(future_moves) * related_period_months
-            if future_moves:
-                monthly_depreciation += (
-                    future_moves[0].depreciation_value
-                    / related_period_months
-                )
+            move_stats = future_move_stats.get(related_asset.id)
+            if move_stats:
+                remaining_months += move_stats["remaining_months"]
+                monthly_depreciation += move_stats["monthly_depreciation"]
 
         row_values = {
             "acquisition_date": asset.acquisition_date or None,
