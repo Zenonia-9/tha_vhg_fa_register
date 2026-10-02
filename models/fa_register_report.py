@@ -44,6 +44,9 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         super()._custom_options_initializer(report, options, previous_options)
 
         options["assets_grouping_field"] = "asset_group_id"
+        options["fa_register_months_folded"] = previous_options.get(
+            "fa_register_months_folded", True,
+        )
         as_of_date = fields.Date.to_date(options["date"]["date_to"])
         fiscal_year_start = date(as_of_date.year if as_of_date.month >= 4 else as_of_date.year - 1, 4, 1)
         options["date"]["date_from"] = fields.Date.to_string(fiscal_year_start)
@@ -204,6 +207,11 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             for lines in comparison_data
         ]
 
+        if not options.get("fa_register_expand_group_id") and not options.get("unfold_all") and not options.get("unfolded_lines"):
+            return self._get_collapsed_group_lines(
+                report, options, year_lines, month_lines, comparison_data,
+            )
+
         detail_lines = []
         for account_id, asset_id, asset_group_id, values in year_lines:
             asset = assets_by_id[asset_id]
@@ -270,6 +278,113 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             })
 
         return [(0, line) for line in lines]
+
+    def _get_collapsed_group_lines(self, report, options, year_lines, month_lines, comparison_data):
+        """Build only group totals for the initial folded report response."""
+        grouped_values = {}
+        monetary_labels = {
+            column["expression_label"]
+            for column in options["columns"]
+            if column.get("figure_type") == "monetary"
+        }
+        source_by_label = {
+            "cost_opening": "assets_date_from",
+            "purchase": "assets_plus",
+            "transfer": "assets_transfer",
+            "write_off": "assets_write_off",
+            "disposal": "assets_minus",
+            "cost_closing": "assets_date_to",
+            "depreciation_opening": "depre_date_from",
+            "depreciation_total": "depre_plus",
+            "depreciation_adjustments": "depre_minus",
+            "depreciation_closing": "depre_date_to",
+            "net_book_value": "balance",
+        }
+
+        def add_values(group_id, values):
+            target = grouped_values.setdefault(group_id, {})
+            for label in monetary_labels:
+                source = source_by_label.get(label, label)
+                target[label] = target.get(label, 0.0) + (values.get(source) or 0.0)
+
+        for _account_id, _asset_id, group_id, values in year_lines:
+            add_values(group_id, values)
+        for month_index, lines in month_lines.items():
+            for _account_id, _asset_id, group_id, values in lines:
+                label = MONTH_EXPRESSION_LABELS[month_index]
+                grouped_values.setdefault(group_id, {})[label] = (
+                    grouped_values.setdefault(group_id, {}).get(label, 0.0)
+                    + (values.get("depre_plus") or 0.0)
+                )
+        for comparison_index, lines in enumerate(comparison_data, start=1):
+            for _account_id, _asset_id, group_id, values in lines:
+                for target_label, source_label, _display_name in COMPARE_LABELS:
+                    label = f"comparison_{target_label}_{comparison_index}"
+                    if label in monetary_labels:
+                        grouped_values.setdefault(group_id, {})[label] = (
+                            grouped_values.setdefault(group_id, {}).get(label, 0.0)
+                            + (values.get(source_label) or 0.0)
+                        )
+
+        group_ids = [group_id for group_id in grouped_values if group_id]
+        groups = self.env["account.asset.group"].browse(group_ids)
+        groups_by_id = {group.id: group for group in groups}
+        lines = []
+        for group_id, values in grouped_values.items():
+            group = groups_by_id.get(group_id)
+            line_id = report._get_generic_line_id("account.asset.group", group_id) if group else report._get_generic_line_id(None, None, markup="no_asset_group")
+            lines.append({
+                "id": line_id,
+                "name": group.name if group else _("No Asset Group"),
+                "level": 1,
+                "columns": [report._build_column_dict(
+                    values.get(column["expression_label"]) if column.get("figure_type") == "monetary" else None,
+                    column,
+                    options=options,
+                ) for column in options["columns"]],
+                "unfoldable": True,
+                "unfolded": False,
+                "expand_function": "_report_expand_unfoldable_line_fa_register_group",
+            })
+
+        total_columns = []
+        for column in options["columns"]:
+            value = sum(
+                values.get(column["expression_label"], 0.0)
+                for values in grouped_values.values()
+            ) if column.get("figure_type") == "monetary" else None
+            total_columns.append(report._build_column_dict(value, column, options=options))
+        lines.append({
+            "id": report._get_generic_line_id(None, None, markup="total"),
+            "level": 1,
+            "name": _("Total"),
+            "columns": total_columns,
+            "unfoldable": False,
+            "unfolded": False,
+        })
+        return [(0, line) for line in lines]
+
+    def _report_expand_unfoldable_line_fa_register_group(
+        self, line_dict_id, groupby, options, progress, offset,
+        unfold_all_batch_data=None,
+    ):
+        group_id = self.env["account.report"]._get_res_id_from_line_id(
+            line_dict_id, "account.asset.group",
+        )
+        expanded_options = {
+            **options,
+            "fa_register_expand_group_id": group_id,
+            "unfold_all": True,
+        }
+        report = self.env["account.report"].browse(options["report_id"])
+        result = self._dynamic_lines_generator(
+            report, expanded_options, None,
+        )
+        return {
+            "lines": [line for _sequence, line in result if line.get("parent_id") == line_dict_id],
+            "offset_increment": 0,
+            "has_more": False,
+        }
 
     def _get_future_move_stats(self, assets, as_of_date):
         """Read future depreciation counts and first values in one database query."""
@@ -404,6 +519,14 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             )
             group_values.setdefault(group_id, []).append(line)
 
+        requested_group_id = options.get("fa_register_expand_group_id")
+        if requested_group_id:
+            group_values = {
+                group_id: children
+                for group_id, children in group_values.items()
+                if group_id == requested_group_id
+            }
+
         group_records = self.env[model].browse(
             [group_id for group_id in group_values if group_id]
         )
@@ -446,7 +569,10 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 "columns": group_columns,
                 "unfoldable": True,
                 "unfolded": is_unfolded,
+                "expand_function": "_report_expand_unfoldable_line_fa_register_group",
             })
+            if not is_unfolded:
+                continue
             for child in children:
                 child["id"] = report._get_generic_line_id(
                     "account.asset",

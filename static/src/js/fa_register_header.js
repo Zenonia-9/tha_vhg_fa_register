@@ -16,8 +16,9 @@ patch(AccountReportHeader.prototype, {
         return Boolean(this.controller.options.fa_register_months_folded);
     },
 
-    toggleMonthlyColumns() {
+    async toggleMonthlyColumns() {
         this.controller.options.fa_register_months_folded = !this.areMonthlyColumnsFolded;
+        await this.controller.reload("fa_register_months_folded", this.controller.options);
     },
 
     isMonthlyDepreciation(column) {
