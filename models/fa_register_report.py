@@ -60,6 +60,8 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                     "NBV as at %(date)s",
                     date=format_date(self.env, as_of_date),
                 )
+            elif column["expression_label"] == "acquisition_date":
+                column["style"] = "text-align: center; vertical-align: middle;"
 
         original_groups = options["column_groups"]
         primary_group_key = next(iter(original_groups))
@@ -188,8 +190,15 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 options, comparison_start, comparison_as_of
             ))
 
-        if not options.get("fa_register_expand_group_id") and not options.get("unfold_all") and not options.get("unfolded_lines"):
+        has_group_filter = "fa_register_expand_group_id" in options
+        has_subclass_filter = "fa_register_expand_sub_class_id" in options
+        if not has_group_filter and not options.get("unfold_all") and not options.get("unfolded_lines"):
             return self._get_collapsed_group_lines(
+                report, options, year_lines, month_lines, comparison_data,
+            )
+
+        if has_group_filter and not has_subclass_filter and not options.get("unfold_all"):
+            return self._get_collapsed_subclass_lines(
                 report, options, year_lines, month_lines, comparison_data,
             )
 
@@ -234,8 +243,12 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                     currency=asset.currency_id if column.get("figure_type") == "monetary" else None,
                 ))
 
+            parent_line_id = options.get("fa_register_expand_line_id")
+            detail_line_id = report._get_generic_line_id(
+                "account.asset", asset_id, parent_line_id=parent_line_id,
+            )
             detail_lines.append({
-                "id": report._get_generic_line_id("account.asset", asset_id),
+                "id": detail_line_id,
                 "name": "",
                 "level": 1,
                 "columns": columns,
@@ -245,9 +258,13 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 "assets_account_id": account_id,
                 "assets_asset_group_id": asset_group_id,
                 "_is_asset_detail": True,
+                **({"parent_id": parent_line_id} if parent_line_id else {}),
             })
 
-        lines = self._group_register_lines(report, options, detail_lines)
+        if has_subclass_filter:
+            lines = detail_lines
+        else:
+            lines = self._group_register_lines(report, options, detail_lines)
         sequence = 0
         for line in lines:
             if line.pop("_is_asset_detail", False):
@@ -365,18 +382,108 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         })
         return [(0, line) for line in lines]
 
+    def _get_collapsed_subclass_lines(self, report, options, year_lines, month_lines, comparison_data):
+        """Return Sub Class totals below one expanded Asset Group."""
+        group_line_id = options["fa_register_expand_line_id"]
+        grouped_values = {}
+        monetary_labels = {
+            column["expression_label"]
+            for column in options["columns"]
+            if column.get("figure_type") == "monetary"
+        }
+        source_by_label = {
+            "cost_opening": "assets_date_from",
+            "purchase": "assets_plus",
+            "transfer": "assets_transfer",
+            "write_off": "assets_write_off",
+            "disposal": "assets_minus",
+            "cost_closing": "assets_date_to",
+            "depreciation_opening": "depre_date_from",
+            "depreciation_total": "depre_plus",
+            "depreciation_adjustments": "depre_minus",
+            "depreciation_closing": "depre_date_to",
+            "net_book_value": "balance",
+        }
+
+        def add_values(subclass_id, values):
+            target = grouped_values.setdefault(subclass_id or 0, {})
+            for label in monetary_labels:
+                source = source_by_label.get(label, label)
+                target[label] = target.get(label, 0.0) + (values.get(source) or 0.0)
+
+        subclass_by_asset_id = self._get_asset_subclass_by_id(
+            year_lines + [line for lines in month_lines.values() for line in lines]
+            + [line for lines in comparison_data for line in lines]
+        )
+        for _account_id, asset_id, _group_id, values in year_lines:
+            subclass_id = subclass_by_asset_id.get(asset_id)
+            add_values(subclass_id, values)
+        for month_index, lines in month_lines.items():
+            for _account_id, asset_id, _group_id, values in lines:
+                subclass_id = subclass_by_asset_id.get(asset_id)
+                label = MONTH_EXPRESSION_LABELS[month_index]
+                target = grouped_values.setdefault(subclass_id or 0, {})
+                target[label] = target.get(label, 0.0) + (values.get("depre_plus") or 0.0)
+        for comparison_index, lines in enumerate(comparison_data, start=1):
+            for _account_id, asset_id, _group_id, values in lines:
+                subclass_id = subclass_by_asset_id.get(asset_id)
+                target = grouped_values.setdefault(subclass_id or 0, {})
+                for target_label, source_label, _display_name in COMPARE_LABELS:
+                    label = f"comparison_{target_label}_{comparison_index}"
+                    if label in monetary_labels:
+                        target[label] = target.get(label, 0.0) + (values.get(source_label) or 0.0)
+
+        subclass_records = self.env["tha.asset.sub.class"].browse(
+            [subclass_id for subclass_id in grouped_values if subclass_id]
+        )
+        records_by_id = {record.id: record for record in subclass_records}
+        lines = []
+        for subclass_id, values in grouped_values.items():
+            subclass = records_by_id.get(subclass_id)
+            line_id = (
+                report._get_generic_line_id(
+                    "tha.asset.sub.class", subclass_id, parent_line_id=group_line_id,
+                )
+                if subclass
+                else report._get_generic_line_id(
+                    None, None, markup="no_asset_sub_class", parent_line_id=group_line_id,
+                )
+            )
+            lines.append({
+                "id": line_id,
+                "parent_id": group_line_id,
+                "name": subclass.name if subclass else _("No Sub Class"),
+                "level": 2,
+                "columns": [report._build_column_dict(
+                    values.get(column["expression_label"])
+                    if column.get("figure_type") == "monetary" else None,
+                    column,
+                    options=options,
+                ) for column in options["columns"]],
+                "unfoldable": True,
+                "unfolded": False,
+                "expand_function": "_report_expand_unfoldable_line_fa_register_group",
+            })
+        return [(0, line) for line in lines]
+
     def _report_expand_unfoldable_line_fa_register_group(
         self, line_dict_id, groupby, options, progress, offset,
         unfold_all_batch_data=None,
     ):
-        group_id = self.env["account.report"]._get_res_id_from_line_id(
-            line_dict_id, "account.asset.group",
-        )
-        expanded_options = {
-            **options,
-            "fa_register_expand_group_id": group_id,
-            "unfold_all": True,
-        }
+        report_model = self.env["account.report"]
+        group_id = report_model._get_res_id_from_line_id(line_dict_id, "account.asset.group") or 0
+        subclass_id = report_model._get_res_id_from_line_id(line_dict_id, "tha.asset.sub.class")
+        line_parts = report_model._parse_line_id(line_dict_id)
+        if subclass_id is None and line_parts[-1][0] == "no_asset_sub_class":
+            subclass_id = 0
+        expanded_options = {**options, "fa_register_expand_group_id": group_id}
+        if subclass_id is not None:
+            expanded_options.update({
+                "fa_register_expand_sub_class_id": subclass_id,
+                "fa_register_expand_line_id": line_dict_id,
+            })
+        else:
+            expanded_options["fa_register_expand_line_id"] = line_dict_id
         report = self.env["account.report"].browse(options["report_id"])
         result = self._dynamic_lines_generator(
             report, expanded_options, None,
@@ -429,12 +536,27 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         }
         lines = super()._query_lines(period_options)
         requested_group_id = options.get("fa_register_expand_group_id")
-        if requested_group_id:
+        if "fa_register_expand_group_id" in options:
             lines = [
                 line for line in lines
-                if line[2] == requested_group_id
+                if (line[2] or 0) == requested_group_id
+            ]
+        if "fa_register_expand_sub_class_id" in options:
+            requested_subclass_id = options["fa_register_expand_sub_class_id"]
+            subclass_by_asset_id = self._get_asset_subclass_by_id(lines)
+            lines = [
+                line for line in lines
+                if (subclass_by_asset_id.get(line[1]) or 0) == requested_subclass_id
             ]
         return lines
+
+    def _get_asset_subclass_by_id(self, lines):
+        asset_ids = {line[1] for line in lines}
+        assets = self.env["account.asset"].browse(asset_ids)
+        return {
+            asset.id: asset.tha_sub_class_id.id
+            for asset in assets
+        }
 
     def _get_asset_column_values(
         self, asset, values, month_values, comparison_values, as_of_date,
@@ -473,7 +595,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             "size": optional_field_value("x_studio_size"),
             "color": optional_field_value("x_studio_color"),
             "quantity": optional_field_value("x_studio_quantity"),
-            "remark": None,
+            "remark": optional_field_value("tha_remark"),
             "prorata_date": asset.prorata_date or None,
             "gl_code": asset.account_asset_id.code or None,
             "asset_category": asset.asset_group_id.name or None,

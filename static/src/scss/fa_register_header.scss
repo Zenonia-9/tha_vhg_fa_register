@@ -1,4 +1,9 @@
 .o_account_reports_page {
+    [data-expression_label="acquisition_date"] {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
     .fa_register_month_header {
         cursor: pointer;
         user-select: none;

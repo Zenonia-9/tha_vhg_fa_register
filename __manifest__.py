@@ -1,7 +1,7 @@
 {
     "name": "VHG Fixed Asset Register",
     "summary": "Native accounting report matching the Victoria Hospital fixed asset register.",
-    "version": "19.0.1.0.6",
+    "version": "19.0.1.0.7",
     "category": "Accounting/Accounting",
     "author": "Thein Htoo Aung",
     "license": "LGPL-3",
@@ -9,6 +9,7 @@
         "account_asset",
         "account_reports",
         "tha_vhg_bs_ext",
+        "tha_vhg_asset_subclass",
     ],
     "data": [
         "data/fa_register_report.xml",
