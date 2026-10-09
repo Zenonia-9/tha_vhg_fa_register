@@ -294,9 +294,7 @@
         id="menu_action_account_report_fa_register"
         name="Fixed Asset Register"
         action="action_account_report_fa_register"
-        parent="tha_vhg_bs_ext.menu_vhg_management_reports"
+        parent="tha_vhg_daily_cash_register.menu_other_reports"
         groups="account.group_account_readonly"
         sequence="26"/>
-
-    <function model="ir.ui.menu" name="tha_vhg_attach_fa_register_management_menu" eval="[[]]"/>
 </odoo>

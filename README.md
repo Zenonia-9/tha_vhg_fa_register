@@ -2,7 +2,7 @@
 
 This addon adds a native Odoo 19 accounting report based on the `FA Register Detail` workbook. It leaves the standard Depreciation Schedule unchanged.
 
-Open it from **Accounting → Configuration → Management Reports → Fixed Asset Register**.
+Open it from **Accounting → Reporting → Other Reports → Fixed Asset Register**.
 
 ## Report behavior
 
