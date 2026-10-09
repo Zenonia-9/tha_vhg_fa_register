@@ -601,7 +601,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             "asset_category": asset.asset_group_id.name or None,
             "cost_opening": values.get("assets_date_from"),
             "purchase": values.get("assets_plus"),
-            "movement_date": None,
+            "movement_date": asset.tha_transfer_date or None,
             "transfer": None,
             "write_off": None,
             "disposal": values.get("assets_minus"),
