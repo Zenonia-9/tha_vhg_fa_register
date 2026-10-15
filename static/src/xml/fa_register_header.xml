@@ -24,6 +24,26 @@
                     </t>
                 </Dropdown>
             </div>
+            <div t-if="'tha_units' in controller.cachedFilterOptions" id="filter_tha_unit">
+                <Dropdown>
+                    <button class="btn btn-secondary">
+                        <i class="fa fa-sitemap me-1"/><t t-out="this.thaUnitFilterName"/>
+                    </button>
+                    <t t-set-slot="content">
+                        <DropdownItem onSelected="() => this.thaClearUnits()" closingMode="'none'">
+                            All Units
+                        </DropdownItem>
+                        <div t-if="!controller.cachedFilterOptions.tha_units.length" class="dropdown-item-text text-muted">
+                            No units configured.
+                        </div>
+                        <t t-foreach="controller.cachedFilterOptions.tha_units" t-as="unit" t-key="unit.value">
+                            <DropdownItem class="{ 'selected': unit.selected }"
+                                          onSelected="() => this.thaSelectUnit(unit)"
+                                          closingMode="'none'" t-out="unit.name"/>
+                        </t>
+                    </t>
+                </Dropdown>
+            </div>
         </xpath>
     </t>
     <t t-name="tha_vhg_fa_register.FixedAssetRegisterHeader"

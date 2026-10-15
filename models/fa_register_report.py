@@ -28,6 +28,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
     def _custom_options_initializer(self, report, options, previous_options):
         super()._custom_options_initializer(report, options, previous_options)
         self._tha_init_department_options(report, options, previous_options)
+        self._tha_init_unit_options(report, options, previous_options)
 
         options["assets_grouping_field"] = "asset_group_id"
         options["fa_register_months_folded"] = previous_options.get(
@@ -165,6 +166,25 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 "name": department.display_name,
                 "selected": (model_name, department.id) in selected_ids,
             } for department in departments)
+
+    def _tha_init_unit_options(self, report, options, previous_options):
+        unit_field = "x_studio_unit"
+        if unit_field not in self.env["account.asset"]._fields:
+            return
+        domain = []
+        if "company_id" in self.env["account.asset"]._fields:
+            domain = [("company_id", "in", report.get_report_company_ids(options))]
+        units = self.env["account.asset"]._read_group(
+            domain, groupby=[unit_field], aggregates=["__count"],
+        )
+        selected_values = {
+            unit["value"] for unit in previous_options.get("tha_units", [])
+            if unit.get("selected")
+        }
+        options["tha_units"] = [
+            {"value": value, "name": value, "selected": value in selected_values}
+            for value, _count in units if value
+        ]
 
     def _tha_analytic_department_domain(self):
         plans = self.env["account.analytic.plan"].search([("name", "=ilike", "Department")])
@@ -591,6 +611,15 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 asset_id for asset_id, departments in self._tha_asset_departments(assets).items()
                 if any((department._name, department.id) in department_keys for department in departments)
             }
+            lines = [line for line in lines if line[1] in matching_asset_ids]
+        selected_units = {
+            unit["value"] for unit in options.get("tha_units", []) if unit.get("selected")
+        }
+        if selected_units and lines:
+            matching_asset_ids = set(self.env["account.asset"].with_context(active_test=False).search([
+                ("id", "in", [line[1] for line in lines]),
+                ("x_studio_unit", "in", list(selected_units)),
+            ]).ids)
             lines = [line for line in lines if line[1] in matching_asset_ids]
         requested_group_id = options.get("fa_register_expand_group_id")
         if "fa_register_expand_group_id" in options:

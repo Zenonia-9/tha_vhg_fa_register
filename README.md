@@ -11,6 +11,7 @@ Open it from **Accounting → Reporting → Other Reports → Fixed Asset Regist
 - Odoo's native comparison selector adds only comparative closing gross cost, accumulated depreciation, and net book value columns.
 - Assets are grouped by Asset Group (not account), with assets lacking a group under **No Asset Group**. Search, unfolding, opening an asset, and PDF/XLSX export use the account-report interface.
 - **All Departments**, beside All Journals, filters by the asset's current Department (the same source as the Dept column). Select one or more departments; an asset matching any selected department is included once. Click **All Departments** to clear the selection, including assets without a department. The selection persists through report reloads and applies to group/subclass totals, expanded assets, monthly depreciation, comparisons, and PDF/XLSX exports. The dropdown opens even when no departments exist and displays **No departments configured.**
+- **All Units** filters by `x_studio_unit`. Select one or more unit values; clicking **All Units** clears the filter. The selection persists through report reloads and applies alongside the Department filter to totals, expanded assets, comparisons, and PDF/XLSX exports. When no unit values exist, the dropdown displays **No units configured.**
 - The report's first column is the generated `Sr No.` line label; workbook row 4 (the source column indices) is omitted.
 
 ## Field and value sources

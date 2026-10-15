@@ -32,6 +32,23 @@ patch(AccountReportFilters.prototype, {
         }
         this.applyFilters("tha_departments");
     },
+
+    get thaUnitFilterName() {
+        const selected = this.controller.cachedFilterOptions.tha_units.filter((unit) => unit.selected);
+        return selected.length ? selected.map((unit) => unit.name).join(", ") : _t("All Units");
+    },
+
+    thaSelectUnit(unit) {
+        unit.selected = !unit.selected;
+        this.applyFilters("tha_units");
+    },
+
+    thaClearUnits() {
+        for (const unit of this.controller.cachedFilterOptions.tha_units) {
+            unit.selected = false;
+        }
+        this.applyFilters("tha_units");
+    },
 });
 
 patch(AccountReportHeader.prototype, {
