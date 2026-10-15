@@ -2,6 +2,8 @@
 
 import { AccountReportHeader } from "@account_reports/components/account_report/header/header";
 import { AccountReportLine } from "@account_reports/components/account_report/line/line";
+import { AccountReportFilters } from "@account_reports/components/account_report/filters/filters";
+import { _t } from "@web/core/l10n/translation";
 import { patch } from "@web/core/utils/patch";
 
 const MONTH_LABELS = new Set([
@@ -10,6 +12,27 @@ const MONTH_LABELS = new Set([
     "depreciation_oct", "depreciation_nov", "depreciation_dec",
     "depreciation_jan", "depreciation_feb", "depreciation_mar",
 ]);
+
+patch(AccountReportFilters.prototype, {
+    get thaDepartmentFilterName() {
+        const selected = this.controller.cachedFilterOptions.tha_departments.filter(
+            (department) => department.selected
+        );
+        return selected.length ? selected.map((department) => department.name).join(", ") : _t("All Departments");
+    },
+
+    thaSelectDepartment(department) {
+        department.selected = !department.selected;
+        this.applyFilters("tha_departments");
+    },
+
+    thaClearDepartments() {
+        for (const department of this.controller.cachedFilterOptions.tha_departments) {
+            department.selected = false;
+        }
+        this.applyFilters("tha_departments");
+    },
+});
 
 patch(AccountReportHeader.prototype, {
     get areMonthlyColumnsFolded() {

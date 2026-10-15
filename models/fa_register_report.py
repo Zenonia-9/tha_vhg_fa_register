@@ -27,6 +27,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
 
     def _custom_options_initializer(self, report, options, previous_options):
         super()._custom_options_initializer(report, options, previous_options)
+        self._tha_init_department_options(report, options, previous_options)
 
         options["assets_grouping_field"] = "asset_group_id"
         options["fa_register_months_folded"] = previous_options.get(
@@ -130,9 +131,8 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 "colspan": len(options["columns"]) - column_offset,
             })
         options["custom_columns_subheaders"] = section_headers
-        options["custom_display_config"]["templates"].pop(
-            "AccountReportFilters",
-            None,
+        options["custom_display_config"]["templates"]["AccountReportFilters"] = (
+            "tha_vhg_fa_register.FixedAssetRegisterFilters"
         )
         options["custom_display_config"]["templates"]["AccountReportHeader"] = (
             "tha_vhg_fa_register.FixedAssetRegisterHeader"
@@ -140,6 +140,64 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         options["custom_display_config"]["templates"]["AccountReportLine"] = (
             "tha_vhg_fa_register.FixedAssetRegisterLine"
         )
+
+    def _tha_init_department_options(self, report, options, previous_options):
+        department_field = self.env["account.asset"]._fields.get("department_info")
+        department_models = []
+        if department_field and department_field.type in ("many2one", "many2many"):
+            department_models.append((department_field.comodel_name, []))
+        if not department_field or department_field.comodel_name != "account.analytic.account":
+            department_models.append(("account.analytic.account", self._tha_analytic_department_domain()))
+        selected_ids = {
+            (department.get("model", department_field.comodel_name if department_field else ""), department["id"])
+            for department in previous_options.get("tha_departments", [])
+            if department.get("selected")
+        }
+        options["tha_departments"] = []
+        for model_name, domain in department_models:
+            department_model = self.env[model_name]
+            if "company_id" in department_model._fields:
+                domain = domain + [("company_id", "in", [False, *report.get_report_company_ids(options)])]
+            departments = department_model.with_context(active_test=False).search(domain, order="name, id")
+            options["tha_departments"].extend({
+                "id": department.id,
+                "model": model_name,
+                "name": department.display_name,
+                "selected": (model_name, department.id) in selected_ids,
+            } for department in departments)
+
+    def _tha_analytic_department_domain(self):
+        plans = self.env["account.analytic.plan"].search([("name", "=ilike", "Department")])
+        return [("plan_id", "child_of", plans.ids)] if plans else [("id", "=", 0)]
+
+    def _tha_asset_departments(self, assets):
+        """Prefer explicit departments, with the transfer workflow's analytic fallback."""
+        analytic_ids = {
+            int(account_id)
+            for asset in assets
+            for key, percentage in (asset.analytic_distribution or {}).items()
+            if percentage
+            for account_id in key.split(",")
+            if account_id.isdigit()
+        }
+        accounts = self.env["account.analytic.account"].with_context(active_test=False).search(
+            self._tha_analytic_department_domain() + [("id", "in", list(analytic_ids))]
+        )
+        result = {}
+        for asset in assets:
+            explicit = asset.department_info if "department_info" in asset._fields else False
+            if explicit:
+                result[asset.id] = explicit
+            else:
+                asset_account_ids = {
+                    int(account_id)
+                    for key, percentage in (asset.analytic_distribution or {}).items()
+                    if percentage
+                    for account_id in key.split(",")
+                    if account_id.isdigit()
+                }
+                result[asset.id] = accounts.filtered(lambda account: account.id in asset_account_ids)
+        return result
 
     def _dynamic_lines_generator(
         self, report, options, all_column_groups_expression_totals, warnings=None
@@ -520,6 +578,20 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             },
         }
         lines = super()._query_lines(period_options)
+        department_keys = {
+            (department["model"], department["id"]) for department in options.get("tha_departments", [])
+            if department.get("selected")
+        }
+        if department_keys and lines:
+            # Filter before aggregation so every period and export shares the same assets.
+            assets = self.env["account.asset"].with_context(active_test=False).search([
+                ("id", "in", [line[1] for line in lines]),
+            ])
+            matching_asset_ids = {
+                asset_id for asset_id, departments in self._tha_asset_departments(assets).items()
+                if any((department._name, department.id) in department_keys for department in departments)
+            }
+            lines = [line for line in lines if line[1] in matching_asset_ids]
         requested_group_id = options.get("fa_register_expand_group_id")
         if "fa_register_expand_group_id" in options:
             lines = [
@@ -567,8 +639,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         row_values = {
             "acquisition_date": asset.acquisition_date or None,
             "asset_code": optional_field_value("x_studio_asset_code"),
-            "department": ", ".join(asset.department_info.mapped("name"))
-            if "department_info" in asset._fields else None,
+            "department": ", ".join(self._tha_asset_departments(asset)[asset.id].mapped("name")),
             "unit": optional_field_value("x_studio_unit"),
             "location": optional_field_value("x_studio_location"),
             "vendor_name": optional_field_value("x_studio_vendor_name"),

@@ -1,5 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
+    <t t-name="tha_vhg_fa_register.FixedAssetRegisterFilters"
+       t-inherit="account_reports.AccountReportFiltersCustomizable"
+       t-inherit-mode="primary">
+        <xpath expr="//div[@id='filter_journal']/.." position="after">
+            <div t-if="'tha_departments' in controller.cachedFilterOptions" id="filter_tha_department">
+                <Dropdown>
+                    <button class="btn btn-secondary">
+                        <i class="fa fa-building-o me-1"/><t t-out="this.thaDepartmentFilterName"/>
+                    </button>
+                    <t t-set-slot="content">
+                        <DropdownItem onSelected="() => this.thaClearDepartments()" closingMode="'none'">
+                            All Departments
+                        </DropdownItem>
+                        <div t-if="!controller.cachedFilterOptions.tha_departments.length" class="dropdown-item-text text-muted">
+                            No departments configured.
+                        </div>
+                        <t t-foreach="controller.cachedFilterOptions.tha_departments" t-as="department" t-key="department.model + ':' + department.id">
+                            <DropdownItem class="{ 'selected': department.selected }"
+                                          onSelected="() => this.thaSelectDepartment(department)"
+                                          closingMode="'none'" t-out="department.name"/>
+                        </t>
+                    </t>
+                </Dropdown>
+            </div>
+        </xpath>
+    </t>
     <t t-name="tha_vhg_fa_register.FixedAssetRegisterHeader"
        t-inherit="account_reports.AccountReportHeaderCustomizable"
        t-inherit-mode="primary">
