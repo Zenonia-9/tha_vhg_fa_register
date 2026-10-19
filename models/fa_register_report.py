@@ -337,7 +337,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         if detail_lines:
             total_columns = []
             for column_index, column in enumerate(options["columns"]):
-                if column.get("figure_type") != "monetary":
+                if column.get("figure_type") not in ("monetary", "integer", "float"):
                     value = None
                 else:
                     value = sum(
@@ -382,14 +382,17 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             "net_book_value": "balance",
         }
 
-        def add_values(group_id, values):
+        quantities = self._get_asset_quantities(asset_id for _account_id, asset_id, _group_id, _values in year_lines)
+
+        def add_values(group_id, asset_id, values):
             target = grouped_values.setdefault(group_id, {})
             for label in monetary_labels:
                 source = source_by_label.get(label, label)
                 target[label] = target.get(label, 0.0) + (values.get(source) or 0.0)
+            target["quantity"] = target.get("quantity", 0) + quantities.get(asset_id, 0)
 
-        for _account_id, _asset_id, group_id, values in year_lines:
-            add_values(group_id, values)
+        for _account_id, asset_id, group_id, values in year_lines:
+            add_values(group_id, asset_id, values)
         for month_index, lines in month_lines.items():
             for _account_id, _asset_id, group_id, values in lines:
                 label = MONTH_EXPRESSION_LABELS[month_index]
@@ -419,7 +422,8 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 "name": group.name if group else _("No Asset Group"),
                 "level": 1,
                 "columns": [report._build_column_dict(
-                    values.get(column["expression_label"]) if column.get("figure_type") == "monetary" else None,
+                    values.get(column["expression_label"])
+                    if column.get("figure_type") in ("monetary", "integer", "float") else None,
                     column,
                     options=options,
                 ) for column in options["columns"]],
@@ -433,7 +437,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             value = sum(
                 values.get(column["expression_label"], 0.0)
                 for values in grouped_values.values()
-            ) if column.get("figure_type") == "monetary" else None
+            ) if column.get("figure_type") in ("monetary", "integer", "float") else None
             total_columns.append(report._build_column_dict(value, column, options=options))
         lines.append({
             "id": report._get_generic_line_id(None, None, markup="total"),
@@ -468,11 +472,14 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             "net_book_value": "balance",
         }
 
-        def add_values(subclass_id, values):
+        quantities = self._get_asset_quantities(asset_id for _account_id, asset_id, _group_id, _values in year_lines)
+
+        def add_values(subclass_id, asset_id, values):
             target = grouped_values.setdefault(subclass_id or 0, {})
             for label in monetary_labels:
                 source = source_by_label.get(label, label)
                 target[label] = target.get(label, 0.0) + (values.get(source) or 0.0)
+            target["quantity"] = target.get("quantity", 0) + quantities.get(asset_id, 0)
 
         subclass_by_asset_id = self._get_asset_subclass_by_id(
             year_lines + [line for lines in month_lines.values() for line in lines]
@@ -480,7 +487,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         )
         for _account_id, asset_id, _group_id, values in year_lines:
             subclass_id = subclass_by_asset_id.get(asset_id)
-            add_values(subclass_id, values)
+            add_values(subclass_id, asset_id, values)
         for month_index, lines in month_lines.items():
             for _account_id, asset_id, _group_id, values in lines:
                 subclass_id = subclass_by_asset_id.get(asset_id)
@@ -519,7 +526,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 "level": 2,
                 "columns": [report._build_column_dict(
                     values.get(column["expression_label"])
-                    if column.get("figure_type") == "monetary" else None,
+                    if column.get("figure_type") in ("monetary", "integer", "float") else None,
                     column,
                     options=options,
                 ) for column in options["columns"]],
@@ -764,7 +771,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 name = group_record.name
             group_columns = []
             for column_index, column in enumerate(options["columns"]):
-                if column.get("figure_type") != "monetary":
+                if column.get("figure_type") not in ("monetary", "integer", "float"):
                     value = None
                 else:
                     value = sum(
@@ -799,3 +806,11 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 result.append(child)
 
         return result
+
+    def _get_asset_quantities(self, asset_ids):
+        """Return configured quantities for assets, treating unset values as zero."""
+        asset_model = self.env["account.asset"]
+        if "x_studio_quantity" not in asset_model._fields:
+            return {}
+        assets = asset_model.browse(list(set(asset_ids)))
+        return {asset.id: asset.x_studio_quantity or 0 for asset in assets}
