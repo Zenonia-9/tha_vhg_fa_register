@@ -44,6 +44,46 @@
                     </t>
                 </Dropdown>
             </div>
+            <div t-if="'tha_asset_groups' in controller.cachedFilterOptions" id="filter_tha_asset_group">
+                <Dropdown>
+                    <button class="btn btn-secondary">
+                        <i class="fa fa-tags me-1"/><t t-out="this.thaAssetGroupFilterName"/>
+                    </button>
+                    <t t-set-slot="content">
+                        <DropdownItem onSelected="() => this.thaClearAssetGroups()" closingMode="'none'">
+                            All Asset Groups
+                        </DropdownItem>
+                        <div t-if="!controller.cachedFilterOptions.tha_asset_groups.length" class="dropdown-item-text text-muted">
+                            No asset groups configured.
+                        </div>
+                        <t t-foreach="controller.cachedFilterOptions.tha_asset_groups" t-as="group" t-key="group.id">
+                            <DropdownItem class="{ 'selected': group.selected }"
+                                          onSelected="() => this.thaSelectAssetGroup(group)"
+                                          closingMode="'none'" t-out="group.name"/>
+                        </t>
+                    </t>
+                </Dropdown>
+            </div>
+            <div t-if="'tha_sub_classes' in controller.cachedFilterOptions" id="filter_tha_sub_class">
+                <Dropdown>
+                    <button class="btn btn-secondary">
+                        <i class="fa fa-tags me-1"/><t t-out="this.thaSubClassFilterName"/>
+                    </button>
+                    <t t-set-slot="content">
+                        <DropdownItem onSelected="() => this.thaClearSubClasses()" closingMode="'none'">
+                            All Sub Classes
+                        </DropdownItem>
+                        <div t-if="!controller.cachedFilterOptions.tha_sub_classes.length" class="dropdown-item-text text-muted">
+                            No sub classes configured.
+                        </div>
+                        <t t-foreach="controller.cachedFilterOptions.tha_sub_classes" t-as="subclass" t-key="subclass.id">
+                            <DropdownItem class="{ 'selected': subclass.selected }"
+                                          onSelected="() => this.thaSelectSubClass(subclass)"
+                                          closingMode="'none'" t-out="subclass.name"/>
+                        </t>
+                    </t>
+                </Dropdown>
+            </div>
         </xpath>
     </t>
     <t t-name="tha_vhg_fa_register.FixedAssetRegisterHeader"

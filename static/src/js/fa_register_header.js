@@ -49,6 +49,40 @@ patch(AccountReportFilters.prototype, {
         }
         this.applyFilters("tha_units");
     },
+
+    get thaAssetGroupFilterName() {
+        const selected = this.controller.cachedFilterOptions.tha_asset_groups.filter((group) => group.selected);
+        return selected.length ? selected.map((group) => group.name).join(", ") : _t("All Asset Groups");
+    },
+
+    thaSelectAssetGroup(group) {
+        group.selected = !group.selected;
+        this.applyFilters("tha_asset_groups");
+    },
+
+    thaClearAssetGroups() {
+        for (const group of this.controller.cachedFilterOptions.tha_asset_groups) {
+            group.selected = false;
+        }
+        this.applyFilters("tha_asset_groups");
+    },
+
+    get thaSubClassFilterName() {
+        const selected = this.controller.cachedFilterOptions.tha_sub_classes.filter((subclass) => subclass.selected);
+        return selected.length ? selected.map((subclass) => subclass.name).join(", ") : _t("All Sub Classes");
+    },
+
+    thaSelectSubClass(subclass) {
+        subclass.selected = !subclass.selected;
+        this.applyFilters("tha_sub_classes");
+    },
+
+    thaClearSubClasses() {
+        for (const subclass of this.controller.cachedFilterOptions.tha_sub_classes) {
+            subclass.selected = false;
+        }
+        this.applyFilters("tha_sub_classes");
+    },
 });
 
 patch(AccountReportHeader.prototype, {

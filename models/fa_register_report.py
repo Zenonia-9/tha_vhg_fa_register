@@ -29,6 +29,8 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         super()._custom_options_initializer(report, options, previous_options)
         self._tha_init_department_options(report, options, previous_options)
         self._tha_init_unit_options(report, options, previous_options)
+        self._tha_init_asset_group_options(report, options, previous_options)
+        self._tha_init_sub_class_options(report, options, previous_options)
 
         options["assets_grouping_field"] = "asset_group_id"
         options["fa_register_months_folded"] = previous_options.get(
@@ -184,6 +186,32 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         options["tha_units"] = [
             {"value": value, "name": value, "selected": value in selected_values}
             for value, _count in units if value
+        ]
+
+    def _tha_init_asset_group_options(self, report, options, previous_options):
+        groups = self.env["account.asset.group"].search([], order="name, id")
+        selected_ids = {
+            group["id"] for group in previous_options.get("tha_asset_groups", [])
+            if group.get("selected")
+        }
+        options["tha_asset_groups"] = [
+            {"id": group.id, "name": group.display_name, "selected": group.id in selected_ids}
+            for group in groups
+        ]
+
+    def _tha_init_sub_class_options(self, report, options, previous_options):
+        domain = []
+        subclass_model = self.env["tha.asset.sub.class"]
+        if "company_id" in subclass_model._fields:
+            domain = [("company_id", "in", [False, *report.get_report_company_ids(options)])]
+        subclasses = subclass_model.search(domain, order="name, id")
+        selected_ids = {
+            subclass["id"] for subclass in previous_options.get("tha_sub_classes", [])
+            if subclass.get("selected")
+        }
+        options["tha_sub_classes"] = [
+            {"id": subclass.id, "name": subclass.display_name, "selected": subclass.id in selected_ids}
+            for subclass in subclasses
         ]
 
     def _tha_analytic_department_domain(self):
@@ -628,6 +656,21 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                 ("x_studio_unit", "in", list(selected_units)),
             ]).ids)
             lines = [line for line in lines if line[1] in matching_asset_ids]
+        selected_groups = {
+            group["id"] for group in options.get("tha_asset_groups", []) if group.get("selected")
+        }
+        if selected_groups:
+            lines = [line for line in lines if line[2] in selected_groups]
+        selected_subclasses = {
+            subclass["id"] for subclass in options.get("tha_sub_classes", [])
+            if subclass.get("selected")
+        }
+        if selected_subclasses and lines:
+            subclass_by_asset_id = self._get_asset_subclass_by_id(lines)
+            lines = [
+                line for line in lines
+                if subclass_by_asset_id.get(line[1]) in selected_subclasses
+            ]
         requested_group_id = options.get("fa_register_expand_group_id")
         if "fa_register_expand_group_id" in options:
             lines = [
