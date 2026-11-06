@@ -380,7 +380,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         for line in lines:
             if line.pop("_is_asset_detail", False):
                 sequence += 1
-                line["name"] = str(sequence)
+                line["name"] = sequence if options.get("export_mode") in ("file", "print") else str(sequence)
 
         if detail_lines:
             total_columns = []
