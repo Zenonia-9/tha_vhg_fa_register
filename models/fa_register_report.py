@@ -25,14 +25,29 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
     _inherit = "account.asset.report.handler"
     _description = "Fixed Asset Register Report Handler"
 
+    def export_to_xlsx(self, options, response=None):
+        """Keep the screen's fold state when the standard exporter builds print options."""
+        options = {
+            **options,
+            "fa_register_screen_unfold_all": options.get("unfold_all", False),
+            "fa_register_screen_unfolded_lines": options.get("unfolded_lines", []),
+        }
+        return self.env["account.report"].browse(options["report_id"]).export_to_xlsx(options, response)
+
     def _custom_options_initializer(self, report, options, previous_options):
         super()._custom_options_initializer(report, options, previous_options)
+        if options.get("export_mode") == "print" and "fa_register_screen_unfold_all" in previous_options:
+            options["unfold_all"] = previous_options["fa_register_screen_unfold_all"]
+            options["unfolded_lines"] = previous_options.get("fa_register_screen_unfolded_lines", [])
         self._tha_init_department_options(report, options, previous_options)
         self._tha_init_unit_options(report, options, previous_options)
         self._tha_init_asset_group_options(report, options, previous_options)
         self._tha_init_sub_class_options(report, options, previous_options)
 
         options["assets_grouping_field"] = "asset_group_id"
+        options["fa_register_xlsx_company_name"] = ", ".join(
+            self.env["res.company"].browse(report.get_report_company_ids(options)).mapped("display_name")
+        ) or self.env.company.display_name
         options["fa_register_months_folded"] = previous_options.get(
             "fa_register_months_folded", True,
         )
@@ -143,6 +158,11 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         options["custom_display_config"]["templates"]["AccountReportLine"] = (
             "tha_vhg_fa_register.FixedAssetRegisterLine"
         )
+        if options.get("export_mode") == "print":
+            options["column_headers"].insert(0, [{
+                "name": options["fa_register_xlsx_company_name"],
+                "colspan": len(options["columns"]) + 1,
+            }])
 
     def _tha_init_department_options(self, report, options, previous_options):
         department_field = self.env["account.asset"]._fields.get("department_info")
