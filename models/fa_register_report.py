@@ -20,6 +20,21 @@ COMPARE_LABELS = (
 )
 
 
+class FixedAssetRegisterAccountReport(models.Model):
+    _inherit = "account.report"
+
+    def _set_xlsx_cell_sizes(self, sheet, fonts, col, row, value, style, has_colspan):
+        if (
+            self.custom_handler_model_name == "tha.vhg.fa.register.report.handler"
+            and col == 0 and isinstance(value, int) and not isinstance(value, bool)
+        ):
+            # Sequence labels use their own indented format in the base renderer.
+            style.set_num_format("0")
+            style.set_align("right")
+            style.set_indent(0)
+        return super()._set_xlsx_cell_sizes(sheet, fonts, col, row, value, style, has_colspan)
+
+
 class FixedAssetRegisterReportHandler(models.AbstractModel):
     _name = "tha.vhg.fa.register.report.handler"
     _inherit = "account.asset.report.handler"
@@ -361,7 +376,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             detail_lines.append({
                 "id": detail_line_id,
                 "name": "",
-                "level": 1,
+                "level": 3,
                 "columns": columns,
                 "unfoldable": False,
                 "unfolded": False,
