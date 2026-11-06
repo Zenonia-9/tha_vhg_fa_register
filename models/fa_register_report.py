@@ -303,12 +303,12 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
 
         has_group_filter = "fa_register_expand_group_id" in options
         has_subclass_filter = "fa_register_expand_sub_class_id" in options
-        if not has_group_filter and not options.get("unfold_all") and not options.get("unfolded_lines"):
+        if not has_group_filter:
             return self._get_collapsed_group_lines(
                 report, options, year_lines, month_lines, comparison_data,
             )
 
-        if has_group_filter and not has_subclass_filter and not options.get("unfold_all"):
+        if has_group_filter and not has_subclass_filter:
             return self._get_collapsed_subclass_lines(
                 report, options, year_lines, month_lines, comparison_data,
             )
@@ -476,7 +476,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                     options=options,
                 ) for column in options["columns"]],
                 "unfoldable": True,
-                "unfolded": False,
+                "unfolded": bool(options.get("unfold_all") or line_id in options.get("unfolded_lines", [])),
                 "expand_function": "_report_expand_unfoldable_line_fa_register_group",
             })
 
@@ -579,7 +579,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
                     options=options,
                 ) for column in options["columns"]],
                 "unfoldable": True,
-                "unfolded": False,
+                "unfolded": bool(options.get("unfold_all") or line_id in options.get("unfolded_lines", [])),
                 "expand_function": "_report_expand_unfoldable_line_fa_register_group",
             })
         return [(0, line) for line in lines]
