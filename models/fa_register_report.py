@@ -571,7 +571,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
         )
         records_by_id = {record.id: record for record in subclass_records}
         lines = []
-        for subclass_id, values in grouped_values.items():
+        for sequence, (subclass_id, values) in enumerate(grouped_values.items(), start=1):
             subclass = records_by_id.get(subclass_id)
             line_id = (
                 report._get_generic_line_id(
@@ -585,7 +585,7 @@ class FixedAssetRegisterReportHandler(models.AbstractModel):
             lines.append({
                 "id": line_id,
                 "parent_id": group_line_id,
-                "name": subclass.name if subclass else _("No Sub Class"),
+                "name": f"{sequence}. {subclass.name if subclass else _('No Sub Class')}",
                 "level": 2,
                 "columns": [report._build_column_dict(
                     values.get(column["expression_label"])
